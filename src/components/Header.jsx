@@ -38,6 +38,47 @@ export const Header = () => {
 
   const t = translations[lang];
 
+  // Dynamic Strict Tab Filtering based on User Role
+  // Admins can see everything, other roles are strictly isolated
+  const getNavTabs = () => {
+    const baseTabs = [
+      { id: "landing", label: t.home }
+    ];
+
+    if (currentRole === "Admin" || currentRole === "Super Admin") {
+      return [
+        ...baseTabs,
+        { id: "marketplace", label: t.marketplace },
+        { id: "dashboard", label: t.dashboard + " (Admin Panel)" }
+      ];
+    }
+
+    if (currentRole === "Farmer" || currentRole === "Trader") {
+      return [
+        ...baseTabs,
+        { id: "marketplace", label: t.marketplace },
+        { id: "dashboard", label: "Seller Dashboard" }
+      ];
+    }
+
+    if (currentRole === "Buyer" || currentRole === "Industrial Buyer") {
+      return [
+        ...baseTabs,
+        { id: "marketplace", label: t.marketplace },
+        { id: "dashboard", label: "Buyer Dashboard" }
+      ];
+    }
+
+    if (currentRole === "Broker") {
+      return [
+        ...baseTabs,
+        { id: "dashboard", label: "Broker Workstation" }
+      ];
+    }
+
+    return baseTabs;
+  };
+
   return (
     <header className="bg-white border-b border-[#E5E7EB] sticky top-0 z-40 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -54,13 +95,9 @@ export const Header = () => {
             </div>
           </div>
 
-          {/* Core Spot Naviation */}
+          {/* Core Isolated Navigation */}
           <nav className="hidden md:flex gap-1.5 bg-[#F8F9FA] rounded-xl p-1 border border-[#E5E7EB]">
-            {[
-              { id: "landing", label: t.home },
-              { id: "marketplace", label: t.marketplace },
-              { id: "dashboard", label: t.dashboard }
-            ].map(tab => {
+            {getNavTabs().map(tab => {
               const isActive = activeTab === tab.id;
               return (
                 <button
@@ -69,7 +106,7 @@ export const Header = () => {
                   className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
                     isActive
                       ? 'bg-[#374151] text-white shadow-sm'
-                      : 'text-gray-500 hover:text-[#374151]'
+                      : 'text-gray-400 hover:text-[#374151]'
                   }`}
                 >
                   {tab.label}
@@ -81,20 +118,23 @@ export const Header = () => {
           {/* Right Actions & Utilities */}
           <div className="flex items-center gap-4">
 
-            {/* Quick Demo User Switcher */}
-            <div className="hidden lg:flex items-center gap-2 border-r border-[#E5E7EB] pr-4">
-              <span className="text-[10px] font-bold text-gray-400 uppercase">{t.switchUser}:</span>
-              <select
-                onChange={(e) => changeUser(e.target.value)}
-                value={currentUser ? currentUser.id : "u1"}
-                className="bg-[#F8F9FA] border border-[#E5E7EB] rounded-lg px-2 py-1 text-[11px] font-semibold text-[#374151] cursor-pointer"
-              >
-                <option value="u1">Tariq Khan (Farmer)</option>
-                <option value="u2">Haroon Ahmed (Trader)</option>
-                <option value="u3">Sarmad Malik (Buyer)</option>
-                <option value="u5">Exchange Admin</option>
-              </select>
-            </div>
+            {/* Session Switcher is ONLY visible for Admins (acting as the Super Model master controller) */}
+            {(currentRole === "Admin" || currentRole === "Super Admin") && (
+              <div className="hidden lg:flex items-center gap-2 border-r border-[#E5E7EB] pr-4 animate-fade-in">
+                <span className="text-[10px] font-bold text-amber-500 uppercase">Super Control:</span>
+                <select
+                  onChange={(e) => changeUser(e.target.value)}
+                  value={currentUser ? currentUser.id : "u5"}
+                  className="bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 text-[11px] font-bold text-[#374151] cursor-pointer"
+                >
+                  <option value="u5">Exchange Admin (Super Model)</option>
+                  <option value="u1">Tariq Khan (Farmer)</option>
+                  <option value="u2">Haroon Ahmed (Trader)</option>
+                  <option value="u3">Sarmad Malik (Buyer)</option>
+                  <option value="u4">Ali Raza Ghouri (Broker)</option>
+                </select>
+              </div>
+            )}
 
             {/* Multilingual Switcher */}
             <button

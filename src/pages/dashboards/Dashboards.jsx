@@ -28,7 +28,7 @@ export const Dashboards = () => {
   // ----------------------------------
   const [newListing, setNewListing] = useState({
     category: "Wheat",
-    variety: "Sargodha Semi-Hard",
+    variety: "Hard Wheat",
     customCategory: "",
     customVariety: "",
     grade: "Grade A (Standard)",
@@ -143,7 +143,7 @@ export const Dashboards = () => {
     // Reset posting state
     setNewListing({
       category: "Wheat",
-      variety: "Sargodha Semi-Hard",
+      variety: "Hard Wheat",
       customCategory: "",
       customVariety: "",
       grade: "Grade A (Standard)",
@@ -263,7 +263,7 @@ export const Dashboards = () => {
                              .reduce((acc, curr) => acc + curr.totalAmount, 0);
 
     return (
-      <div className="space-y-8">
+      <div className="space-y-8 animate-fade-in">
         {/* Overview Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm">
@@ -540,7 +540,7 @@ export const Dashboards = () => {
     const myOrders = orders.filter(o => o.buyerId === currentUser.id);
 
     return (
-      <div className="space-y-8">
+      <div className="space-y-8 animate-fade-in">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm">
             <span className="text-[10px] font-bold text-gray-400 block uppercase">ACTIVE BUY CONTRACTS</span>
@@ -905,35 +905,40 @@ export const Dashboards = () => {
             <div className="flex items-center gap-2">
               <h2 className="text-base font-black text-[#374151]">{currentUser ? currentUser.name : "Grower Guest"}</h2>
               <span className="text-[10px] font-extrabold text-[#D4AF37] uppercase bg-amber-50 border border-[#D4AF37]/20 px-2 py-0.5 rounded">
-                Verified Member
+                {currentRole} Session
               </span>
             </div>
             <p className="text-[11px] text-gray-400 font-semibold">{currentUser ? currentUser.company : "Independent Agri Growers"}</p>
           </div>
         </div>
 
-        {/* Dashboard Switcher Dropdown */}
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-bold text-gray-400 uppercase whitespace-nowrap">Dashboard Node:</span>
-          <select
-            value={currentRole}
-            onChange={(e) => changeRole(e.target.value)}
-            className="bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-4 py-2.5 text-xs font-bold text-[#374151] focus:outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer"
-          >
-            <option value="Farmer">Farmer (Seller)</option>
-            <option value="Buyer">Industrial Buyer</option>
-            <option value="Broker">Broker Portfolio</option>
-            <option value="Admin">Exchange Administrator</option>
-          </select>
-        </div>
+        {/* Switcher is locked down and ONLY visible to Admins/Super-Admins */}
+        {(currentRole === "Admin" || currentRole === "Super Admin") && (
+          <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 px-4 py-2.5 rounded-xl animate-fade-in">
+            <span className="text-xs font-bold text-amber-500 uppercase whitespace-nowrap">Testing Workstation:</span>
+            <select
+              value={currentRole}
+              onChange={(e) => changeRole(e.target.value)}
+              className="bg-[#F8F9FA] border border-[#E5E7EB] rounded-lg px-3 py-1.5 text-xs font-bold text-[#374151] focus:outline-none cursor-pointer"
+            >
+              <option value="Admin">Admin Panel</option>
+              <option value="Farmer">Farmer (Seller)</option>
+              <option value="Buyer">Industrial Buyer</option>
+              <option value="Broker">Broker Portfolio</option>
+            </select>
+          </div>
+        )}
 
       </div>
 
-      {/* Render selected workspace */}
+      {/* Render selected workspace strictly locked down */}
       {currentRole === "Farmer" && renderSellerDashboard()}
+      {currentRole === "Trader" && renderSellerDashboard()}
       {currentRole === "Buyer" && renderBuyerDashboard()}
+      {currentRole === "Industrial Buyer" && renderBuyerDashboard()}
       {currentRole === "Broker" && renderBrokerDashboard()}
       {currentRole === "Admin" && renderAdminDashboard()}
+      {currentRole === "Super Admin" && renderAdminDashboard()}
 
     </div>
   );

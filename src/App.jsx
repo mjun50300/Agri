@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -9,9 +9,16 @@ import { CommodityDetailDrawer } from './pages/marketplace/CommodityDetailDrawer
 import { Toast } from './components/common/Toast';
 
 export const App = () => {
-  const { lang, activeTab, toasts, removeToast } = useApp();
+  const { lang, activeTab, setActiveTab, currentRole, toasts, removeToast } = useApp();
 
   const isRtl = lang === "ur";
+
+  // Prevent view state leaks based on active user role changes
+  useEffect(() => {
+    if (currentRole === "Broker" && activeTab === "marketplace") {
+      setActiveTab("dashboard");
+    }
+  }, [currentRole, activeTab, setActiveTab]);
 
   return (
     <div
@@ -25,7 +32,7 @@ export const App = () => {
         {/* Dynamic page render */}
         <main className="w-full">
           {activeTab === "landing" && <LandingPage />}
-          {activeTab === "marketplace" && <Marketplace />}
+          {activeTab === "marketplace" && currentRole !== "Broker" && <Marketplace />}
           {activeTab === "dashboard" && <Dashboards />}
         </main>
 
