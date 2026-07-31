@@ -20,6 +20,8 @@ export const AppProvider = ({ children }) => {
     setCurrentUser(user);
     if (user) {
       setCurrentRole(user.type);
+    } else {
+      setCurrentRole("Guest");
     }
     setListings(apiClient.getListings());
     setMandiPrices(apiClient.getMandiPrices());
@@ -27,14 +29,54 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   const changeUser = (userId) => {
+    if (userId === "logged_out") {
+      handleLogout();
+      return;
+    }
     apiClient.setCurrentUser(userId);
     const user = apiClient.getCurrentUser();
     setCurrentUser(user);
-    setCurrentRole(user.type);
-    showToast(`Switched user session to ${user.name} (${user.type})`, "info");
+    if (user) {
+      setCurrentRole(user.type);
+      showToast(`Switched user session to ${user.name} (${user.type})`, "info");
+    } else {
+      setCurrentRole("Guest");
+    }
 
     // Refresh orders
     setOrders(apiClient.getOrders());
+  };
+
+  const handleSignUp = (userData) => {
+    const newUser = apiClient.registerUser(userData);
+    setCurrentUser(newUser);
+    setCurrentRole(newUser.type);
+    showToast(`Welcome to ZarZaraat, ${newUser.name}!`, "success");
+    setOrders(apiClient.getOrders());
+    setActiveTab("dashboard");
+  };
+
+  const handleLogin = (userId) => {
+    apiClient.setCurrentUser(userId);
+    const user = apiClient.getCurrentUser();
+    setCurrentUser(user);
+    if (user) {
+      setCurrentRole(user.type);
+      showToast(`Welcome back, ${user.name}!`, "success");
+      setActiveTab("dashboard");
+    } else {
+      setCurrentRole("Guest");
+    }
+    setOrders(apiClient.getOrders());
+  };
+
+  const handleLogout = () => {
+    apiClient.setCurrentUser("logged_out");
+    setCurrentUser(null);
+    setCurrentRole("Guest");
+    showToast("Signed out successfully. View only access.", "info");
+    setOrders([]);
+    setActiveTab("landing");
   };
 
   const changeRole = (role) => {
@@ -80,7 +122,10 @@ export const AppProvider = ({ children }) => {
       toggleLanguage,
       showToast,
       removeToast,
-      reloadData
+      reloadData,
+      handleSignUp,
+      handleLogin,
+      handleLogout
     }}>
       {children}
     </AppContext.Provider>

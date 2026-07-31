@@ -23,6 +23,16 @@ export const Dashboards = () => {
     reloadData
   } = useApp();
 
+  if (!currentUser) {
+    return (
+      <div className="max-w-md mx-auto my-16 text-center bg-white p-8 border border-[#E5E7EB] rounded-[24px] shadow-sm space-y-4">
+        <div className="text-3xl">🔑</div>
+        <h2 className="text-sm font-black text-[#374151] uppercase tracking-wider">Access Denied</h2>
+        <p className="text-xs text-gray-400">Please sign in or register to access your workspace terminal.</p>
+      </div>
+    );
+  }
+
   // ----------------------------------
   // SELLER STATES
   // ----------------------------------

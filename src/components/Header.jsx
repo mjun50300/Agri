@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { apiClient } from '../api/apiClient';
+import { AuthModal } from './AuthModal';
 
 export const Header = () => {
   const {
@@ -10,8 +11,17 @@ export const Header = () => {
     toggleLanguage,
     activeTab,
     setActiveTab,
-    changeUser
+    changeUser,
+    handleLogout
   } = useApp();
+
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState("login"); // "login" | "signup"
+
+  const openAuth = (mode) => {
+    setAuthMode(mode);
+    setIsAuthOpen(true);
+  };
 
   const translations = {
     en: {
@@ -116,10 +126,10 @@ export const Header = () => {
           </nav>
 
           {/* Right Actions & Utilities */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3.5">
 
             {/* Session Switcher is ONLY visible for Admins (acting as the Super Model master controller) */}
-            {(currentRole === "Admin" || currentRole === "Super Admin") && (
+            {currentUser && (currentRole === "Admin" || currentRole === "Super Admin") && (
               <div className="hidden lg:flex items-center gap-2 border-r border-[#E5E7EB] pr-4 animate-fade-in">
                 <span className="text-[10px] font-bold text-amber-500 uppercase">Super Control:</span>
                 <select
@@ -151,10 +161,53 @@ export const Header = () => {
               </div>
             )}
 
+            {/* Auth Buttons / Authenticated User Profile */}
+            {currentUser ? (
+              <div className="flex items-center gap-3 border-l border-[#E5E7EB] pl-3.5">
+                <div className="hidden xl:flex flex-col items-end text-right">
+                  <span className="text-xs font-extrabold text-[#374151] leading-none">{currentUser.name}</span>
+                  <span className="text-[9px] font-bold text-[#84CC16] uppercase mt-0.5">{currentUser.type}</span>
+                </div>
+                <img
+                  src={currentUser.avatar}
+                  alt="Avatar"
+                  className="w-8 h-8 rounded-full border border-[#84CC16]/20 object-cover"
+                />
+                <button
+                  onClick={handleLogout}
+                  className="bg-[#F8F9FA] hover:bg-red-50 text-gray-500 hover:text-red-600 border border-[#E5E7EB] text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 border-l border-[#E5E7EB] pl-3.5">
+                <button
+                  onClick={() => openAuth("login")}
+                  className="bg-white hover:bg-[#F8F9FA] text-[#374151] border border-[#E5E7EB] text-[11px] font-bold uppercase tracking-wider px-3.5 py-1.5 rounded-lg transition-all"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => openAuth("signup")}
+                  className="bg-[#84CC16] hover:bg-[#ECFCCB] hover:text-[#4D7C0F] text-white text-[11px] font-bold uppercase tracking-wider px-3.5 py-1.5 rounded-lg transition-all shadow-sm"
+                >
+                  Sign Up
+                </button>
+              </div>
+            )}
+
           </div>
 
         </div>
       </div>
+
+      {/* Unified Premium Authentication Dialog */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        mode={authMode}
+        onClose={() => setIsAuthOpen(false)}
+      />
     </header>
   );
 };

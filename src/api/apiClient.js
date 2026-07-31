@@ -397,17 +397,53 @@ export const saveDB = (db) => {
 export const apiClient = {
   // Current session user simulation
   getCurrentUser: () => {
-    const session = localStorage.getItem("zarzaraat_current_user_id") || "u1"; // default to Tariq Khan
+    const session = localStorage.getItem("zarzaraat_current_user_id");
+    if (session === "logged_out") return null;
+    const currentId = session || "u1"; // default to Tariq Khan
     const db = getDB();
-    return db.users.find(u => u.id === session) || db.users[0];
+    return db.users.find(u => u.id === currentId) || null;
   },
 
   setCurrentUser: (userId) => {
-    localStorage.setItem("zarzaraat_current_user_id", userId);
+    if (userId) {
+      localStorage.setItem("zarzaraat_current_user_id", userId);
+    } else {
+      localStorage.removeItem("zarzaraat_current_user_id");
+    }
   },
 
   getUsers: () => {
     return getDB().users;
+  },
+
+  registerUser: (userData) => {
+    const db = getDB();
+    const newUserId = "u_" + Math.random().toString(36).substring(2, 9);
+    const newUser = {
+      id: newUserId,
+      email: userData.email || `${userData.name.toLowerCase().replace(/\s+/g, '')}@zarzaraat.pk`,
+      phone: userData.phone || "+92 300 1112233",
+      name: userData.name,
+      company: userData.company || `${userData.name} Agro`,
+      type: userData.type, // e.g. Farmer, Buyer, etc.
+      cnic: userData.cnic || "35201-1111111-1",
+      ntn: userData.ntn || "1111111-1",
+      verificationStatus: "Verified",
+      trustScore: 90,
+      isPremium: false,
+      isVerifiedBuyer: userData.type.toLowerCase().includes("buyer"),
+      isTopTrader: false,
+      balance: Number(userData.balance || 10000),
+      avatar: userData.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=120"
+    };
+    db.users.push(newUser);
+    saveDB(db);
+    localStorage.setItem("zarzaraat_current_user_id", newUserId);
+    return newUser;
+  },
+
+  logoutUser: () => {
+    localStorage.removeItem("zarzaraat_current_user_id");
   },
 
   updateUser: (userId, updatedFields) => {
@@ -689,6 +725,7 @@ export const apiClient = {
   getOrders: () => {
     const db = getDB();
     const currentUser = apiClient.getCurrentUser();
+    if (!currentUser) return [];
     // Filter orders where user is seller or buyer or broker/admin
     if (currentUser.type === "Admin" || currentUser.type === "Super Admin") {
       return db.orders;
@@ -789,14 +826,16 @@ export const apiClient = {
   getNotifications: () => {
     const db = getDB();
     const currentUser = apiClient.getCurrentUser();
+    if (!currentUser) return [];
     return db.notifications.filter(n => n.userId === currentUser.id);
   },
 
   markNotificationsAsRead: () => {
     const db = getDB();
-    const currentUser = currentUser.id;
+    const currentUser = apiClient.getCurrentUser();
+    if (!currentUser) return;
     db.notifications.forEach(n => {
-      if (n.userId === currentUser) n.isRead = true;
+      if (n.userId === currentUser.id) n.isRead = true;
     });
     saveDB(db);
   },
