@@ -45,7 +45,9 @@ export const Header = () => {
 
           {/* Brand Logo & Tagline */}
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🌾</span>
+            <svg className="w-8 h-8 text-[#84CC16]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M5 12h14" />
+            </svg>
             <div>
               <span className="text-lg font-black text-[#374151] tracking-tight uppercase block">{t.brand}</span>
               <span className="text-[9px] font-bold text-[#84CC16] tracking-widest block uppercase -mt-1">{t.exchange}</span>
@@ -99,7 +101,7 @@ export const Header = () => {
               onClick={toggleLanguage}
               className="bg-[#F8F9FA] hover:bg-[#ECFCCB] hover:text-[#4D7C0F] text-[#374151] border border-[#E5E7EB] text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
             >
-              🌐 {t.langLabel}
+              <span>🌐</span> {t.langLabel}
             </button>
 
             {/* Wallet Info Badge */}

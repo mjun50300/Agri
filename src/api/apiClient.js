@@ -3,7 +3,7 @@
 // Persisted in localStorage to simulate real database actions.
 // ====================================================================
 
-const STORAGE_KEY = "zarzaraat_db_v1";
+const STORAGE_KEY = "zarzaraat_db_v1_p3";
 
 // 1. Core Metadata Definitions
 export const USER_TYPES = [
@@ -12,12 +12,37 @@ export const USER_TYPES = [
   "Transport Company", "Quality Inspector", "Admin", "Super Admin"
 ];
 
-export const DEFAULT_COMMODITIES = [
-  "Wheat", "Rice", "Basmati Rice", "IRRI Rice", "Maize", "Corn",
-  "Mustard", "Cotton", "Sugarcane", "Barley", "Sesame", "Millet",
-  "Pulses", "Lentils", "Chickpeas", "Soybean", "Canola", "Sunflower",
-  "Fruits", "Vegetables", "Animal Feed", "Seeds", "Fertilizer"
+// Cascading Commodities & Varieties Map precisely matched to specifications
+export const COMMODITY_MAP = {
+  "Rice": [
+    "Basmati", "Super Basmati", "PK-386", "IRRI-6", "KS-282",
+    "Jasmine", "Brown Rice", "Broken Rice", "Other (Custom)"
+  ],
+  "Wheat": [
+    "Hard Wheat", "Soft Wheat", "Durum Wheat", "Spring Wheat",
+    "Winter Wheat", "Milling Wheat", "Feed Wheat", "Other (Custom)"
+  ],
+  "Maize": [
+    "Yellow Maize", "White Maize", "Sweet Corn", "Baby Corn",
+    "Flint Corn", "Dent Corn", "Popcorn", "Seed Maize", "Feed Maize", "Other (Custom)"
+  ],
+  "Cotton": ["Multan MNH-93", "Sindh Star Cotton", "KPK Long-Staple", "Other (Custom)"],
+  "Sugarcane": ["Thatta-10", "CPF-247 Premium", "HSF-240", "Other (Custom)"],
+  "Mustard": ["Canola-Mustard Gold", "Traditional Sarson", "Other (Custom)"],
+  "Seeds": ["Hybrid Wheat F1 Seeds", "Cotton Bt Seeds", "Other (Custom)"],
+  "Fertilizer": ["Urea Gold", "DAP Premium Phosphates", "SOP Sulphate", "Other (Custom)"],
+  "Custom Commodity": ["Enter Custom Variety..."]
+};
+
+export const DEFAULT_COMMODITIES = Object.keys(COMMODITY_MAP);
+
+export const PROVINCES = [
+  "Punjab", "Sindh", "KPK", "Balochistan", "Gilgit-Baltistan", "AJK"
 ];
+
+export const HARVEST_YEARS = ["2023", "2024", "2025"];
+
+export const ORGANIC_STATUSES = ["Organic Certified", "Conventional"];
 
 export const GRADES = [
   { id: "g1", name: "Grade A++ (Premium Export)", specs: { moisture: "10-12%", purity: "99%", broken: "<1%" } },
@@ -127,7 +152,8 @@ const INITIAL_DATABASE = {
       sellerName: "Chaudhary Tariq Khan",
       sellerType: "Farmer",
       sellerVerified: true,
-      category: "Basmati Rice",
+      category: "Rice",
+      variety: "Super Basmati",
       grade: "Grade A++ (Premium Export)",
       quantity: 50,
       unit: "Metric Ton",
@@ -137,6 +163,9 @@ const INITIAL_DATABASE = {
       harvestDate: "2024-10-15",
       expiryDate: "2025-05-15",
       location: "Sahiwal",
+      province: "Punjab",
+      harvestYear: "2024",
+      organicStatus: "Organic Certified",
       gps: { lat: 30.6682, lng: 73.1114 },
       moisture: 11.2,
       foreignMatter: 0.5,
@@ -159,6 +188,7 @@ const INITIAL_DATABASE = {
       sellerType: "Trader",
       sellerVerified: true,
       category: "Wheat",
+      variety: "Hard Wheat",
       grade: "Grade A (Standard)",
       quantity: 120,
       unit: "Metric Ton",
@@ -172,6 +202,9 @@ const INITIAL_DATABASE = {
       harvestDate: "2024-05-20",
       expiryDate: "2025-04-20",
       location: "Faisalabad",
+      province: "Punjab",
+      harvestYear: "2024",
+      organicStatus: "Conventional",
       gps: { lat: 31.4504, lng: 73.1350 },
       moisture: 12.5,
       foreignMatter: 1.2,
@@ -197,6 +230,7 @@ const INITIAL_DATABASE = {
       sellerType: "Farmer",
       sellerVerified: true,
       category: "Cotton",
+      variety: "Multan MNH-93",
       grade: "Grade A++ (Premium Export)",
       quantity: 200,
       unit: "Maund",
@@ -206,6 +240,9 @@ const INITIAL_DATABASE = {
       harvestDate: "2024-09-10",
       expiryDate: "2025-08-10",
       location: "Multan",
+      province: "Punjab",
+      harvestYear: "2024",
+      organicStatus: "Conventional",
       gps: { lat: 30.1575, lng: 71.5249 },
       moisture: 7.5,
       foreignMatter: 1.0,
@@ -230,6 +267,7 @@ const INITIAL_DATABASE = {
       sellerType: "Trader",
       sellerVerified: true,
       category: "Maize",
+      variety: "Yellow Maize",
       grade: "Grade B (Commercial)",
       quantity: 80,
       unit: "Metric Ton",
@@ -239,6 +277,9 @@ const INITIAL_DATABASE = {
       harvestDate: "2024-08-01",
       expiryDate: "2025-02-01",
       location: "Okara",
+      province: "Punjab",
+      harvestYear: "2024",
+      organicStatus: "Organic Certified",
       moisture: 14.8,
       foreignMatter: 2.5,
       broken: 4.2,
@@ -262,7 +303,8 @@ const INITIAL_DATABASE = {
       sellerName: "Chaudhary Tariq Khan",
       buyerId: "u3",
       buyerName: "Sarmad Malik",
-      category: "Basmati Rice",
+      category: "Rice",
+      variety: "Super Basmati",
       quantity: 10,
       unit: "Metric Ton",
       price: 245000,
@@ -275,10 +317,10 @@ const INITIAL_DATABASE = {
   ],
   mandiPrices: [
     { city: "Sahiwal", category: "Wheat", grade: "Grade A", price: 3950, change: 1.2 },
-    { city: "Sahiwal", category: "Basmati Rice", grade: "Grade A++", price: 9800, change: -0.5 },
+    { city: "Sahiwal", category: "Rice", grade: "Grade A++", price: 9800, change: -0.5 },
     { city: "Faisalabad", category: "Wheat", grade: "Grade A", price: 4010, change: 0.8 },
     { city: "Faisalabad", category: "Maize", grade: "Grade B", price: 2850, change: 2.1 },
-    { city: "Lahore", category: "Basmati Rice", grade: "Grade A++", price: 10200, change: 1.5 },
+    { city: "Lahore", category: "Rice", grade: "Grade A++", price: 10200, change: 1.5 },
     { city: "Multan", category: "Cotton", grade: "Grade A++", price: 9150, change: -1.0 },
     { city: "Karachi", category: "Wheat", grade: "Grade B", price: 4120, change: 0.4 },
     { city: "Okara", category: "Maize", grade: "Grade A", price: 3050, change: 1.1 },
@@ -329,7 +371,12 @@ const INITIAL_DATABASE = {
     brokerCommissionPct: "0.5",
     allowCustomCommodities: "true",
     exchangeStatus: "Normal"
-  }
+  },
+  // Custom Commodity and Varieties submitted by Users/Admins
+  customCommodities: [
+    { id: "cc1", category: "Grapes", variety: "Sundarkhani Premium", approved: true, date: "2024-11-10" },
+    { id: "cc2", category: "Canola", variety: "Peshawar Black-Bt", approved: false, date: "2024-11-13" }
+  ]
 };
 
 // Database persistence wrapper
@@ -395,9 +442,25 @@ export const apiClient = {
     if (filters.category && filters.category !== "All") {
       listings = listings.filter(l => l.category === filters.category);
     }
+    // Variety
+    if (filters.variety && filters.variety !== "All") {
+      listings = listings.filter(l => l.variety === filters.variety);
+    }
     // Location / City
     if (filters.location && filters.location !== "All") {
       listings = listings.filter(l => l.location === filters.location);
+    }
+    // Province
+    if (filters.province && filters.province !== "All") {
+      listings = listings.filter(l => l.province === filters.province);
+    }
+    // Harvest Year
+    if (filters.harvestYear && filters.harvestYear !== "All") {
+      listings = listings.filter(l => l.harvestYear === filters.harvestYear);
+    }
+    // Organic Status
+    if (filters.organicStatus && filters.organicStatus !== "All") {
+      listings = listings.filter(l => l.organicStatus === filters.organicStatus);
     }
     // Auction / Direct Buy
     if (filters.isAuction !== undefined) {
@@ -454,6 +517,47 @@ export const apiClient = {
       return db.listings[idx];
     }
     return null;
+  },
+
+  // Custom commodities submitted by sellers
+  getCustomCommodities: () => {
+    return getDB().customCommodities;
+  },
+
+  addCustomCommodity: (category, variety) => {
+    const db = getDB();
+    const newCC = {
+      id: "cc_" + Math.random().toString(36).substring(2, 9),
+      category,
+      variety,
+      approved: false,
+      date: new Date().toISOString().split("T")[0]
+    };
+    db.customCommodities.push(newCC);
+    saveDB(db);
+    return newCC;
+  },
+
+  approveCustomCommodity: (ccId) => {
+    const db = getDB();
+    const cc = db.customCommodities.find(c => c.id === ccId);
+    if (cc) {
+      cc.approved = true;
+      // Add custom variety back into our global cascade map if not already present
+      if (!COMMODITY_MAP[cc.category]) {
+        COMMODITY_MAP[cc.category] = [cc.variety];
+      } else if (!COMMODITY_MAP[cc.category].includes(cc.variety)) {
+        COMMODITY_MAP[cc.category].push(cc.variety);
+      }
+      saveDB(db);
+    }
+    return cc;
+  },
+
+  rejectCustomCommodity: (ccId) => {
+    const db = getDB();
+    db.customCommodities = db.customCommodities.filter(c => c.id !== ccId);
+    saveDB(db);
   },
 
   // Bids Management
@@ -563,6 +667,7 @@ export const apiClient = {
         buyerId: offer.buyerId,
         buyerName: offer.buyerName,
         category: listing.category,
+        variety: listing.variety,
         quantity: offer.qty,
         unit: listing.unit,
         price: offer.counterPrice || offer.price,
@@ -689,9 +794,9 @@ export const apiClient = {
 
   markNotificationsAsRead: () => {
     const db = getDB();
-    const currentUser = apiClient.getCurrentUser();
+    const currentUser = currentUser.id;
     db.notifications.forEach(n => {
-      if (n.userId === currentUser.id) n.isRead = true;
+      if (n.userId === currentUser) n.isRead = true;
     });
     saveDB(db);
   },

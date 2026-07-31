@@ -30,11 +30,14 @@ export const Footer = () => {
         {/* Brand Col */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-[#374151] font-black text-sm uppercase">
-            <span>🌾</span> ZarZaraat Exchange
+            <svg className="w-5 h-5 text-[#84CC16]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M5 12h14" />
+            </svg>
+            ZarZaraat Exchange
           </div>
           <p className="text-gray-400">{t.tagline}</p>
-          <div className="flex gap-3 text-lg">
-            <span>🇵🇰</span> <span>🛡️</span> <span>💼</span>
+          <div className="flex gap-3 text-xs font-bold text-gray-400">
+            <span>PK-EXCHANGE</span> <span>SECURED</span>
           </div>
         </div>
 

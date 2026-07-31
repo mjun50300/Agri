@@ -1,6 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { apiClient, DEFAULT_COMMODITIES, GRADES, MANDI_CITIES } from '../../api/apiClient';
+import {
+  apiClient,
+  COMMODITY_MAP,
+  DEFAULT_COMMODITIES,
+  GRADES,
+  MANDI_CITIES,
+  PROVINCES,
+  HARVEST_YEARS,
+  ORGANIC_STATUSES
+} from '../../api/apiClient';
 
 export const Dashboards = () => {
   const {
@@ -19,6 +28,9 @@ export const Dashboards = () => {
   // ----------------------------------
   const [newListing, setNewListing] = useState({
     category: "Wheat",
+    variety: "Sargodha Semi-Hard",
+    customCategory: "",
+    customVariety: "",
     grade: "Grade A (Standard)",
     quantity: "",
     unit: "Metric Ton",
@@ -26,6 +38,9 @@ export const Dashboards = () => {
     isNegotiable: true,
     isAuction: false,
     location: "Sahiwal",
+    province: "Punjab",
+    harvestYear: "2024",
+    organicStatus: "Conventional",
     moisture: "12.0",
     purity: "98.0",
     broken: "2.0",
@@ -33,6 +48,17 @@ export const Dashboards = () => {
     packaging: "50kg Jute Bags",
     isExportReady: false
   });
+
+  const [availableVarieties, setAvailableVarieties] = useState([]);
+
+  // Sync varieties when category changes
+  useEffect(() => {
+    const list = COMMODITY_MAP[newListing.category] || [];
+    setAvailableVarieties(list);
+    if (list.length > 0) {
+      setNewListing(prev => ({ ...prev, variety: list[0] }));
+    }
+  }, [newListing.category]);
 
   // ----------------------------------
   // BUYER STATES
@@ -47,8 +73,19 @@ export const Dashboards = () => {
   });
 
   const [rfqsList, setRfqsList] = useState([
-    { id: "rfq-1", category: "Basmati Rice", qty: 25, unit: "Metric Ton", targetPrice: 240000, date: "2024-11-20", city: "Karachi", status: "Active" }
+    { id: "rfq-1", category: "Rice", qty: 25, unit: "Metric Ton", targetPrice: 240000, date: "2024-11-20", city: "Karachi", status: "Active" }
   ]);
+
+  // ----------------------------------
+  // ADMIN STATES
+  // ----------------------------------
+  const [customCommodities, setCustomCommodities] = useState([]);
+  const [newCategoryInput, setNewCategoryInput] = useState("");
+  const [newVarietyInput, setNewVarietyInput] = useState("");
+
+  useEffect(() => {
+    setCustomCommodities(apiClient.getCustomCommodities());
+  }, []);
 
   // ----------------------------------
   // HANDLERS
@@ -60,8 +97,27 @@ export const Dashboards = () => {
       return;
     }
 
+    let cat = newListing.category;
+    let varOpt = newListing.variety;
+
+    // Handle Custom Commodity Submissions
+    if (newListing.category === "Custom Commodity") {
+      if (!newListing.customCategory || !newListing.customVariety) {
+        showToast("Please fill in custom category and variety details", "error");
+        return;
+      }
+      cat = newListing.customCategory;
+      varOpt = newListing.customVariety;
+
+      // Submit custom commodity request to Admin pipeline
+      apiClient.addCustomCommodity(cat, varOpt);
+      setCustomCommodities(apiClient.getCustomCommodities());
+      showToast("Custom commodity sent for Admin approval!", "info");
+    }
+
     const listingData = {
-      category: newListing.category,
+      category: cat,
+      variety: varOpt,
       grade: newListing.grade,
       quantity: Number(newListing.quantity),
       unit: newListing.unit,
@@ -69,6 +125,9 @@ export const Dashboards = () => {
       isNegotiable: newListing.isNegotiable,
       isAuction: newListing.isAuction,
       location: newListing.location,
+      province: newListing.province,
+      harvestYear: newListing.harvestYear,
+      organicStatus: newListing.organicStatus,
       moisture: Number(newListing.moisture),
       purity: Number(newListing.purity),
       broken: Number(newListing.broken),
@@ -80,8 +139,13 @@ export const Dashboards = () => {
 
     apiClient.createListing(listingData);
     showToast("Successfully posted new agricultural contract listing!", "success");
+
+    // Reset posting state
     setNewListing({
       category: "Wheat",
+      variety: "Sargodha Semi-Hard",
+      customCategory: "",
+      customVariety: "",
       grade: "Grade A (Standard)",
       quantity: "",
       unit: "Metric Ton",
@@ -89,6 +153,9 @@ export const Dashboards = () => {
       isNegotiable: true,
       isAuction: false,
       location: "Sahiwal",
+      province: "Punjab",
+      harvestYear: "2024",
+      organicStatus: "Conventional",
       moisture: "12.0",
       purity: "98.0",
       broken: "2.0",
@@ -151,34 +218,67 @@ export const Dashboards = () => {
     }
   };
 
+  const handleApproveCC = (id) => {
+    const approved = apiClient.approveCustomCommodity(id);
+    if (approved) {
+      setCustomCommodities(apiClient.getCustomCommodities());
+      showToast(`Approved custom category ${approved.category} (${approved.variety})`, "success");
+      reloadData();
+    }
+  };
+
+  const handleRejectCC = (id) => {
+    apiClient.rejectCustomCommodity(id);
+    setCustomCommodities(apiClient.getCustomCommodities());
+    showToast("Custom commodity request rejected", "info");
+    reloadData();
+  };
+
+  const handleAddAdminCategory = (e) => {
+    e.preventDefault();
+    if (!newCategoryInput || !newVarietyInput) {
+      showToast("Please fill in both category name and variety", "error");
+      return;
+    }
+    // Dynamically insert into static map for demo purposes
+    if (!COMMODITY_MAP[newCategoryInput]) {
+      COMMODITY_MAP[newCategoryInput] = [newVarietyInput];
+    } else {
+      COMMODITY_MAP[newCategoryInput].push(newVarietyInput);
+    }
+    showToast(`Added ${newCategoryInput} - ${newVarietyInput} to exchange core settings`, "success");
+    setNewCategoryInput("");
+    setNewVarietyInput("");
+    reloadData();
+  };
+
   // ----------------------------------
-  // SUB-COMPONENTS FOR DASHBOARDS
+  // WORKSPACES
   // ----------------------------------
 
   // 1. Seller Dashboard View
   const renderSellerDashboard = () => {
-    // Gather offers received on seller's active listings
     const myActiveListings = listings.filter(l => l.sellerId === currentUser.id);
     const totalSales = orders.filter(o => o.sellerId === currentUser.id && o.status === "Completed")
                              .reduce((acc, curr) => acc + curr.totalAmount, 0);
 
     return (
-      <div className="space-y-8 animate-fade-in">
+      <div className="space-y-8">
         {/* Overview Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)]">
+          <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm">
             <span className="text-[10px] font-bold text-gray-400 block uppercase">TOTAL SALES GENERATED</span>
             <span className="text-xl font-black text-[#374151] font-mono mt-1 block">PKR {totalSales.toLocaleString()}</span>
           </div>
-          <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)]">
+          <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm">
             <span className="text-[10px] font-bold text-gray-400 block uppercase">ACTIVE LISTINGS ON SPOT</span>
             <span className="text-xl font-black text-lime-600 font-mono mt-1 block">{myActiveListings.length} Contracts</span>
           </div>
-          <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)]">
+          <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm">
             <span className="text-[10px] font-bold text-gray-400 block uppercase">WALLED BALANCE</span>
             <span className="text-xl font-black text-lime-600 font-mono mt-1 block">PKR {currentUser.balance.toLocaleString()}</span>
           </div>
-          <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)]">
+          <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm">
             <span className="text-[10px] font-bold text-gray-400 block uppercase">TRUST / RATINGS</span>
             <span className="text-xl font-black text-amber-500 font-mono mt-1 block">★ {currentUser.trustScore}/100</span>
           </div>
@@ -187,9 +287,8 @@ export const Dashboards = () => {
         {/* Post Listing Form */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-7 bg-white border border-[#E5E7EB] rounded-[24px] p-6 shadow-sm">
-            <div className="flex items-center gap-2 border-b border-[#E5E7EB] pb-4 mb-5">
-              <span className="text-lg">🌾</span>
-              <h3 className="text-sm font-bold text-[#374151] uppercase tracking-wide">Post Custom Trade Contract</h3>
+            <div className="flex items-center gap-2 border-b border-[#E5E7EB] pb-4 mb-5 text-[#374151]">
+              <span className="text-sm font-bold uppercase tracking-wide">POST AGRICULTURAL SPOT CONTRACT</span>
             </div>
 
             <form onSubmit={handlePostListing} className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
@@ -204,14 +303,84 @@ export const Dashboards = () => {
                 </select>
               </div>
 
+              {newListing.category === "Custom Commodity" ? (
+                <div className="space-y-1">
+                  <label className="text-[#374151]">Custom Category Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Citrus / Kinnow"
+                    value={newListing.customCategory}
+                    onChange={(e) => setNewListing({...newListing, customCategory: e.target.value})}
+                    className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl p-3 focus:ring-2 focus:ring-[#84CC16]"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <label className="text-[#374151]">Crop Variety (Cascading)</label>
+                  <select
+                    value={newListing.variety}
+                    onChange={(e) => setNewListing({...newListing, variety: e.target.value})}
+                    className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl p-3 focus:ring-2 focus:ring-[#84CC16]"
+                  >
+                    {availableVarieties.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {newListing.category === "Custom Commodity" && (
+                <div className="space-y-1">
+                  <label className="text-[#374151]">Custom Variety Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Sargodha Orange"
+                    value={newListing.customVariety}
+                    onChange={(e) => setNewListing({...newListing, customVariety: e.target.value})}
+                    className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl p-3 focus:ring-2 focus:ring-[#84CC16]"
+                  />
+                </div>
+              )}
+
               <div className="space-y-1">
-                <label className="text-[#374151]">Milling Grade</label>
+                <label className="text-[#374151]">Grade</label>
                 <select
                   value={newListing.grade}
                   onChange={(e) => setNewListing({...newListing, grade: e.target.value})}
                   className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl p-3 focus:ring-2 focus:ring-[#84CC16]"
                 >
                   {GRADES.map(g => <option key={g.id} value={g.name}>{g.name}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[#374151]">Province (Origin)</label>
+                <select
+                  value={newListing.province}
+                  onChange={(e) => setNewListing({...newListing, province: e.target.value})}
+                  className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl p-3 focus:ring-2 focus:ring-[#84CC16]"
+                >
+                  {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[#374151]">Harvest Year</label>
+                <select
+                  value={newListing.harvestYear}
+                  onChange={(e) => setNewListing({...newListing, harvestYear: e.target.value})}
+                  className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl p-3 focus:ring-2 focus:ring-[#84CC16]"
+                >
+                  {HARVEST_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[#374151]">Organic Status</label>
+                <select
+                  value={newListing.organicStatus}
+                  onChange={(e) => setNewListing({...newListing, organicStatus: e.target.value})}
+                  className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl p-3 focus:ring-2 focus:ring-[#84CC16]"
+                >
+                  {ORGANIC_STATUSES.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
 
@@ -261,7 +430,6 @@ export const Dashboards = () => {
                 </select>
               </div>
 
-              {/* Spec parameters */}
               <div className="space-y-1">
                 <label className="text-[#374151]">Moisture %</label>
                 <input
@@ -315,7 +483,7 @@ export const Dashboards = () => {
             </form>
           </div>
 
-          {/* Right Panel: Offers & active lists */}
+          {/* Right Panel: Offers received */}
           <div className="lg:col-span-5 space-y-6">
             <div className="bg-white border border-[#E5E7EB] rounded-[24px] p-6 shadow-sm">
               <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider mb-4">DIRECT OFFERS RECEIVED</span>
@@ -372,7 +540,7 @@ export const Dashboards = () => {
     const myOrders = orders.filter(o => o.buyerId === currentUser.id);
 
     return (
-      <div className="space-y-8 animate-fade-in">
+      <div className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm">
             <span className="text-[10px] font-bold text-gray-400 block uppercase">ACTIVE BUY CONTRACTS</span>
@@ -391,7 +559,6 @@ export const Dashboards = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Active Deals & Escrow release */}
           <div className="lg:col-span-7 bg-white border border-[#E5E7EB] rounded-[24px] p-6 shadow-sm">
             <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider mb-4">ACTIVE CONTRACT ESCROWS & DELIVERY TIMELINE</span>
 
@@ -421,7 +588,6 @@ export const Dashboards = () => {
                       <div>Quantity: <span className="text-[#374151]">{ord.quantity} {ord.unit}</span></div>
                     </div>
 
-                    {/* Escrow Trigger Actions */}
                     <div className="flex gap-2 pt-2">
                       {ord.status === "Awaiting_Escrow_Deposit" && (
                         <button
@@ -450,13 +616,9 @@ export const Dashboards = () => {
             </div>
           </div>
 
-          {/* Broadcast RFQ */}
           <div className="lg:col-span-5 bg-white border border-[#E5E7EB] rounded-[24px] p-6 shadow-sm">
             <div className="border-b border-[#E5E7EB] pb-3 mb-4 flex items-center justify-between">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">BROADCAST RFQ / TENDER REQUEST</span>
-              <span className="text-[9px] font-black text-[#84CC16] uppercase bg-[#ECFCCB] px-2 py-0.5 rounded">
-                Live Broadcast
-              </span>
             </div>
 
             <form onSubmit={handleAddRfq} className="space-y-4 text-xs font-semibold">
@@ -501,21 +663,6 @@ export const Dashboards = () => {
                 Broadcast Tender
               </button>
             </form>
-
-            <div className="mt-6 border-t border-[#E5E7EB] pt-4 space-y-3">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">YOUR BROADCASTED TENDERS</span>
-              {rfqsList.map(item => (
-                <div key={item.id} className="bg-[#F8F9FA] rounded-xl p-3 border border-[#E5E7EB] flex items-center justify-between text-xs">
-                  <div>
-                    <span className="font-extrabold text-[#374151]">{item.category}</span>
-                    <span className="text-[10px] text-gray-400 block font-semibold">{item.qty} {item.unit} @ PKR {item.targetPrice.toLocaleString()}</span>
-                  </div>
-                  <span className="text-[10px] font-bold text-[#84CC16] uppercase bg-green-50 border border-green-200 px-2 py-0.5 rounded">
-                    Active
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>
@@ -542,7 +689,7 @@ export const Dashboards = () => {
         </div>
 
         <div className="bg-white border border-[#E5E7EB] rounded-[24px] p-6 shadow-sm">
-          <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider mb-4">BROKERAGE DEAL SHEET tracker</span>
+          <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider mb-4">BROKERAGE DEAL SHEET TRACKER</span>
 
           <table className="w-full text-left text-xs font-semibold border-collapse">
             <thead>
@@ -575,7 +722,7 @@ export const Dashboards = () => {
     );
   };
 
-  // 4. Admin Dashboard View
+  // 4. Admin Dashboard View with expanded "Commodity Management Table"
   const renderAdminDashboard = () => {
     return (
       <div className="space-y-8 animate-fade-in">
@@ -589,8 +736,8 @@ export const Dashboards = () => {
             <span className="text-xl font-black text-amber-500 font-mono mt-1 block">3 Pending review</span>
           </div>
           <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm">
-            <span className="text-[10px] font-bold text-gray-400 block uppercase">DISPUTES / TICKETS</span>
-            <span className="text-xl font-black text-red-500 font-mono mt-1 block">0 Active dispute</span>
+            <span className="text-[10px] font-bold text-gray-400 block uppercase">CUSTOM COMMODITIES SUBMITTED</span>
+            <span className="text-xl font-black text-amber-500 font-mono mt-1 block">{customCommodities.length} Requests</span>
           </div>
           <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 shadow-sm">
             <span className="text-[10px] font-bold text-gray-400 block uppercase">SYSTEM PERFORMANCE</span>
@@ -598,9 +745,49 @@ export const Dashboards = () => {
           </div>
         </div>
 
+        {/* Dynamic Commodity & Variety Management Form for Admins */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-6 bg-white border border-[#E5E7EB] rounded-[24px] p-6 shadow-sm space-y-4">
+            <div className="border-b border-[#E5E7EB] pb-3 mb-4">
+              <span className="text-xs font-extrabold text-[#374151] uppercase tracking-wider block">ADMIN COMMODITY DIRECTORY CONTROL</span>
+              <p className="text-[10px] text-gray-400">Instantly insert unlimited customized crops, seed categories, or grades on the exchange.</p>
+            </div>
 
-          {/* User verification approvals queue */}
+            <form onSubmit={handleAddAdminCategory} className="space-y-3.5 text-xs font-semibold">
+              <div className="space-y-1">
+                <label className="text-[#374151]">Category Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Lentils / Pulses"
+                  value={newCategoryInput}
+                  onChange={(e) => setNewCategoryInput(e.target.value)}
+                  className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl p-3 focus:ring-2 focus:ring-[#84CC16]"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[#374151]">Default Variety</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Moong Special"
+                  value={newVarietyInput}
+                  onChange={(e) => setNewVarietyInput(e.target.value)}
+                  className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl p-3 focus:ring-2 focus:ring-[#84CC16]"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-[#374151] hover:bg-[#84CC16] text-white py-2.5 rounded-xl font-bold uppercase tracking-wider"
+              >
+                Register Crop Category & Variety
+              </button>
+            </form>
+          </div>
+
+          {/* User Verification CNIC/NTN Pipeline */}
           <div className="lg:col-span-6 bg-white border border-[#E5E7EB] rounded-[24px] p-6 shadow-sm">
             <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider mb-4">CNIC & NTN VERIFICATION PIPELINE</span>
 
@@ -633,26 +820,71 @@ export const Dashboards = () => {
               ))}
             </div>
           </div>
+        </div>
 
-          {/* System settings and logs */}
-          <div className="lg:col-span-6 bg-white border border-[#E5E7EB] rounded-[24px] p-6 shadow-sm">
-            <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider mb-4">CORE SYSTEM ACTIVITY AUDIT LOG</span>
-
-            <div className="space-y-3 max-h-[220px] overflow-y-auto">
-              {[
-                { time: "11:20 AM", event: "User u3 deposited PKR 2.45M for Order ord-1002" },
-                { time: "10:15 AM", event: "Approved SGS quality cert request for Sahiwal Rice" },
-                { time: "09:00 AM", event: "Admin modified Escrow Commission Fee rate to 1.0%" },
-                { time: "08:14 AM", event: "Backup of ZarZaraat exchange schema completed." }
-              ].map((log, idx) => (
-                <div key={idx} className="flex gap-3 text-xs leading-relaxed font-semibold">
-                  <span className="text-gray-400 font-mono whitespace-nowrap">{log.time}</span>
-                  <span className="text-[#374151]">{log.event}</span>
-                </div>
-              ))}
-            </div>
+        {/* Custom Commodities submitted by Users Approval Pipeline Table */}
+        <div className="bg-white border border-[#E5E7EB] rounded-[24px] p-6 shadow-sm">
+          <div className="border-b border-[#E5E7EB] pb-3 mb-4">
+            <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider">CUSTOM USER COMMODITY APPROVAL PIPELINE</span>
           </div>
 
+          <table className="w-full text-left text-xs font-semibold border-collapse">
+            <thead>
+              <tr className="border-b border-[#E5E7EB] text-gray-400 text-[10px] tracking-wider uppercase">
+                <th className="pb-3 font-extrabold">Proposed Category</th>
+                <th className="pb-3 font-extrabold">Proposed Variety</th>
+                <th className="pb-3 font-extrabold">Submission Date</th>
+                <th className="pb-3 font-extrabold">Approval Status</th>
+                <th className="pb-3 font-extrabold">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E5E7EB]/50">
+              {customCommodities.length > 0 ? (
+                customCommodities.map((cc) => (
+                  <tr key={cc.id} className="text-[#374151] font-medium hover:bg-[#F8F9FA] transition-colors">
+                    <td className="py-3.5 font-bold">{cc.category}</td>
+                    <td>{cc.variety}</td>
+                    <td className="font-mono">{cc.date}</td>
+                    <td>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                        cc.approved
+                          ? 'bg-green-50 text-[#84CC16] border border-green-200'
+                          : 'bg-amber-50 text-[#D4AF37] border border-amber-200'
+                      }`}>
+                        {cc.approved ? "Approved" : "Pending Review"}
+                      </span>
+                    </td>
+                    <td className="py-3">
+                      {!cc.approved ? (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleApproveCC(cc.id)}
+                            className="bg-[#84CC16] hover:bg-[#A3E635] text-white px-2 py-1 rounded text-[10px] font-bold"
+                          >
+                            Approve & Map
+                          </button>
+                          <button
+                            onClick={() => handleRejectCC(cc.id)}
+                            className="bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded text-[10px] font-bold"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-[10px]">Fully mapped</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="text-center py-6 text-gray-400 font-semibold">
+                    No custom user commodities pending review.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     );
@@ -673,7 +905,7 @@ export const Dashboards = () => {
             <div className="flex items-center gap-2">
               <h2 className="text-base font-black text-[#374151]">{currentUser ? currentUser.name : "Grower Guest"}</h2>
               <span className="text-[10px] font-extrabold text-[#D4AF37] uppercase bg-amber-50 border border-[#D4AF37]/20 px-2 py-0.5 rounded">
-                Verified Seller
+                Verified Member
               </span>
             </div>
             <p className="text-[11px] text-gray-400 font-semibold">{currentUser ? currentUser.company : "Independent Agri Growers"}</p>

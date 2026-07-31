@@ -1,15 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { apiClient, DEFAULT_COMMODITIES, MANDI_CITIES } from '../../api/apiClient';
+import {
+  apiClient,
+  DEFAULT_COMMODITIES,
+  COMMODITY_MAP,
+  MANDI_CITIES,
+  PROVINCES,
+  HARVEST_YEARS,
+  ORGANIC_STATUSES
+} from '../../api/apiClient';
 import { getIconForCommodity } from '../../components/common/CommodityIcons';
 
 export const Marketplace = () => {
-  const { lang, listings, setSelectedCommodity, showToast, reloadData } = useApp();
+  const { lang, listings, setSelectedCommodity, showToast } = useApp();
 
   // States for search and filter parameters
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedVariety, setSelectedVariety] = useState("All");
   const [selectedCity, setSelectedCity] = useState("All");
+  const [selectedProvince, setSelectedProvince] = useState("All");
+  const [selectedYear, setSelectedYear] = useState("All");
+  const [selectedOrganic, setSelectedOrganic] = useState("All");
   const [tradeType, setTradeType] = useState("All"); // "All", "Direct", "Auction"
   const [exportReady, setExportReady] = useState(false);
   const [maxMoisture, setMaxMoisture] = useState(18);
@@ -18,9 +30,23 @@ export const Marketplace = () => {
   // Sorting
   const [sortBy, setSortBy] = useState("newest");
 
+  // Dynamic variety list cascading
+  const [varietiesList, setVarietiesList] = useState([]);
+
+  useEffect(() => {
+    if (selectedCategory === "All") {
+      setVarietiesList([]);
+      setSelectedVariety("All");
+    } else {
+      const list = COMMODITY_MAP[selectedCategory] || [];
+      setVarietiesList(list);
+      setSelectedVariety("All");
+    }
+  }, [selectedCategory]);
+
   // Dynamic search filtering
   const filteredListings = listings.filter(item => {
-    // 1. Search term (matches Category, Location, or Seller name)
+    // 1. Search term
     const matchesSearch =
       item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -29,26 +55,51 @@ export const Marketplace = () => {
     // 2. Category
     const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
 
-    // 3. Location/City
+    // 3. Variety (Cascading)
+    const matchesVariety = selectedVariety === "All" || item.variety === selectedVariety;
+
+    // 4. Location/City
     const matchesCity = selectedCity === "All" || item.location === selectedCity;
 
-    // 4. Trade type
+    // 5. Province
+    const matchesProvince = selectedProvince === "All" || item.province === selectedProvince;
+
+    // 6. Harvest Year
+    const matchesYear = selectedYear === "All" || item.harvestYear === selectedYear;
+
+    // 7. Organic Status
+    const matchesOrganic = selectedOrganic === "All" || item.organicStatus === selectedOrganic;
+
+    // 8. Trade type
     const matchesTradeType =
       tradeType === "All" ||
       (tradeType === "Direct" && !item.isAuction) ||
       (tradeType === "Auction" && item.isAuction);
 
-    // 5. Export Ready
+    // 9. Export Ready
     const matchesExport = !exportReady || item.isExportReady;
 
-    // 6. Moisture & Purity sliders
+    // 10. Moisture & Purity sliders
     const matchesMoisture = item.moisture <= maxMoisture;
     const matchesPurity = item.purity >= minPurity;
 
     // Filter status
     const matchesStatus = item.status === "Active";
 
-    return matchesSearch && matchesCategory && matchesCity && matchesTradeType && matchesExport && matchesMoisture && matchesPurity && matchesStatus;
+    return (
+      matchesSearch &&
+      matchesCategory &&
+      matchesVariety &&
+      matchesCity &&
+      matchesProvince &&
+      matchesYear &&
+      matchesOrganic &&
+      matchesTradeType &&
+      matchesExport &&
+      matchesMoisture &&
+      matchesPurity &&
+      matchesStatus
+    );
   });
 
   // Apply sorting
@@ -133,16 +184,16 @@ export const Marketplace = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
 
         {/* Sidebar Filters */}
-        <div className="col-span-1 bg-white border border-[#E5E7EB] rounded-[24px] p-6 h-fit space-y-6 shadow-[0_4px_24px_rgba(0,0,0,0.01)]">
+        <div className="col-span-1 bg-white border border-[#E5E7EB] rounded-[24px] p-6 h-fit space-y-5 shadow-[0_4px_24px_rgba(0,0,0,0.01)]">
           <span className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">{t.filters}</span>
 
           {/* Commodity Category */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-[#374151]">Commodity Category</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#374151]">Category</label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#84CC16]"
+              className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none"
             >
               <option value="All">{t.all} Categories</option>
               {DEFAULT_COMMODITIES.map(c => (
@@ -151,23 +202,85 @@ export const Marketplace = () => {
             </select>
           </div>
 
-          {/* Location City */}
-          <div className="space-y-2">
+          {/* Cascading Variety */}
+          {selectedCategory !== "All" && varietiesList.length > 0 && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[#374151]">Crop Variety</label>
+              <select
+                value={selectedVariety}
+                onChange={(e) => setSelectedVariety(e.target.value)}
+                className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none"
+              >
+                <option value="All">{t.all} Varieties</option>
+                {varietiesList.map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Pakistan Province */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#374151]">Province (Origin)</label>
+            <select
+              value={selectedProvince}
+              onChange={(e) => setSelectedProvince(e.target.value)}
+              className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none"
+            >
+              <option value="All">{t.all} Provinces</option>
+              {PROVINCES.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Mandi Location */}
+          <div className="space-y-1.5">
             <label className="text-xs font-bold text-[#374151]">Mandi Location</label>
             <select
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
-              className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#84CC16]"
+              className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none"
             >
-              <option value="All">{t.all} Cities</option>
+              <option value="All">{t.all} Mandis</option>
               {MANDI_CITIES.map(city => (
                 <option key={city} value={city}>{city}</option>
               ))}
             </select>
           </div>
 
-          {/* Trade Type Filter */}
-          <div className="space-y-2">
+          {/* Harvest Year */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#374151]">Harvest Year</label>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none"
+            >
+              <option value="All">{t.all} Harvest Years</option>
+              {HARVEST_YEARS.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Organic Status */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#374151]">Organic Certification</label>
+            <select
+              value={selectedOrganic}
+              onChange={(e) => setSelectedOrganic(e.target.value)}
+              className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none"
+            >
+              <option value="All">{t.all} Certifications</option>
+              {ORGANIC_STATUSES.map(o => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Deal Structure */}
+          <div className="space-y-1.5">
             <label className="text-xs font-bold text-[#374151]">Deal Structure</label>
             <div className="flex flex-col gap-2">
               {[
@@ -252,7 +365,7 @@ export const Marketplace = () => {
                 placeholder={t.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl pl-9 pr-4 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#84CC16]"
+                className="w-full bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl pl-9 pr-4 py-2.5 text-xs font-semibold focus:outline-none"
               />
             </div>
 
@@ -314,7 +427,7 @@ export const Marketplace = () => {
                             {item.location}
                           </span>
                         </div>
-                        <p className="text-[11px] text-gray-400 font-bold">{item.grade}</p>
+                        <p className="text-[11px] text-gray-400 font-bold">{item.variety || item.grade}</p>
 
                         <div className="grid grid-cols-2 gap-2 border-t border-b border-[#E5E7EB]/50 py-2.5 my-3.5 text-[10px] font-bold text-[#374151]">
                           <div>
@@ -330,8 +443,8 @@ export const Marketplace = () => {
                             {item.purity}% (Min)
                           </div>
                           <div>
-                            <span className="text-gray-400 block text-[9px]">Broken Ratio</span>
-                            {item.broken}%
+                            <span className="text-gray-400 block text-[9px]">Origin</span>
+                            {item.province || "Punjab"}
                           </div>
                         </div>
                       </div>
@@ -359,8 +472,7 @@ export const Marketplace = () => {
             </div>
           ) : (
             <div className="bg-white border border-[#E5E7EB] rounded-[24px] p-12 text-center shadow-sm">
-              <span className="text-3xl">🌾</span>
-              <p className="text-sm text-gray-400 font-medium mt-3">{t.emptyState}</p>
+              <span className="text-gray-400 text-sm font-medium mt-3 block">{t.emptyState}</span>
             </div>
           )}
         </div>

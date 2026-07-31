@@ -134,6 +134,18 @@ export const CommodityDetailDrawer = () => {
               <span className="font-bold text-[#374151]">{selectedCommodity.location}</span>
             </div>
             <div>
+              <span className="text-gray-400 block font-medium">Province</span>
+              <span className="font-bold text-[#374151]">{selectedCommodity.province || "Punjab"}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 block font-medium">Harvest Year</span>
+              <span className="font-bold text-[#374151]">{selectedCommodity.harvestYear || "2024"}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 block font-medium">Organic Status</span>
+              <span className="font-bold text-lime-600">{selectedCommodity.organicStatus || "Conventional"}</span>
+            </div>
+            <div>
               <span className="text-gray-400 block font-medium">Moisture Content</span>
               <span className="font-bold text-lime-600">{selectedCommodity.moisture}% (Max)</span>
             </div>
@@ -235,7 +247,9 @@ export const CommodityDetailDrawer = () => {
         {/* AI Negotiation Assistant Simulator */}
         <div className="bg-[#F8F9FA] rounded-[20px] border border-[#E5E7EB] p-5 space-y-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm">🤖</span>
+            <svg className="w-4 h-4 text-[#84CC16]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
             <span className="text-xs font-black text-[#374151] uppercase">AI NEGOTIATION & INSIGHT ASSISTANT</span>
           </div>
 
@@ -254,7 +268,7 @@ export const CommodityDetailDrawer = () => {
               placeholder="Ask: 'Give discount strategy' or 'Predict next 30 days price'..."
               value={aiChatInput}
               onChange={(e) => setAiChatInput(e.target.value)}
-              className="w-full bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#84CC16]"
+              className="w-full bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs focus:outline-none"
               required
             />
             <button
